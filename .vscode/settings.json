@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "*.module": "php",
+        "fcntl.h": "c",
+        "raw.h": "c",
+        "can.h": "c",
+        "time.h": "c"
+    },
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true
+}

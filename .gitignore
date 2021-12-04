@@ -1,0 +1,6 @@
+# VSCode project caches
+/.vscode/*
+!/.vscode/settings.json
+
+# Compilation output
+/can-record
