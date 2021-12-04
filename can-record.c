@@ -17,36 +17,45 @@
 #include <string.h>
 #include <time.h>
 
-static const char usageMessage[] = "Usage:\n    %s <interface> <seconds> <path-to-output-file>\n\n";
-static const char exampleMessage[] = "Example:\n    %s can0 30 /mnt/sdcard/recorded.csv\n\n";
+static const char usageMessage[] = "Usage:\n    %s <interface> [bitrate] <seconds> <path-to-output-file>\n\n";
+static const char exampleMessage[] = "Example:\n    %s vcan0 30 testing.csv\n    %s can0 250000 30 /mnt/sdcard/recorded.csv\n\n";
 static const char headRow[] = "Timestamp (μs),CAN ID,Data Size (byte),1,2,3,4,5,6,7,8\r\n";
 static const char printFormat[] = "%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\r\n";
 
+char *canInterface = NULL;
 int duration = 0;
+char stopCanCmd[30];
 
 void *timerHandler(void *);
 unsigned long long getMicrosecond();
 
 int main(int arg_count, char **args)
 {
-  char *canInterface = NULL;
   char *targetPath = NULL;
+  char *bitrate = 0;
   if (arg_count < 1)
   {
     const char defaultExec[] = "can-record";
     printf(usageMessage, defaultExec);
-    printf(exampleMessage, defaultExec);
+    printf(exampleMessage, defaultExec, defaultExec);
   }
   else if (arg_count < 4)
   {
     printf(usageMessage, args[0]);
-    printf(exampleMessage, args[0]);
+    printf(exampleMessage, args[0], args[0]);
   }
-  else
+  else if (arg_count < 5)
   {
     canInterface = args[1];
     duration = atoi(args[2]);
     targetPath = args[3];
+  }
+  else
+  {
+    canInterface = args[1];
+    bitrate = args[2];
+    duration = atoi(args[3]);
+    targetPath = args[4];
   }
 
   if (canInterface == NULL || duration <= 0 || targetPath == NULL)
@@ -54,8 +63,45 @@ int main(int arg_count, char **args)
 
   if (access(targetPath, F_OK) == 0)
   {
-    fprintf(stderr, "\n\"%s\" file exists, delete it first!\n\n", targetPath);
+    fprintf(stderr, "\nERROR: \"%s\" file exists, delete it first!\n\n", targetPath);
     return EEXIST;
+  }
+
+  sprintf(stopCanCmd, "sudo ip link set %.7s down", canInterface);
+
+  printf("Resetting %s...\n", canInterface);
+  system(stopCanCmd);
+
+  if (bitrate != NULL)
+  {
+    int bitrateInt = atoi(bitrate);
+    if (bitrateInt >= 10 && bitrateInt <= 1000000)
+    {
+      printf("Configuring bitrate %s to %s...\n", canInterface, bitrate);
+      char setBitrateCmd[50];
+      sprintf(setBitrateCmd, "sudo ip link set %.7s type can bitrate %s", canInterface, bitrate);
+      int returnCode = system(setBitrateCmd);
+      if (returnCode != EXIT_SUCCESS)
+      {
+        return returnCode;
+      }
+    }
+    else
+    {
+      fprintf(stderr, "\nERROR: Valid bitrate is a number between 10 and 1000000\n\n");
+      return EINVAL;
+    }
+  }
+
+  printf("Starting %s...\n", canInterface);
+  {
+    char startCanCmd[28];
+    sprintf(startCanCmd, "sudo ip link set %.7s up", canInterface);
+    int returnCode = system(startCanCmd);
+    if (returnCode != EXIT_SUCCESS)
+    {
+      return returnCode;
+    }
   }
 
   printf("Recording to \"%s\" for %u seconds...\n", targetPath, duration);
@@ -114,6 +160,7 @@ int main(int arg_count, char **args)
   }
 
   pthread_cancel(timerThread);
+  system(stopCanCmd);
   return EXIT_FAILURE;
 }
 
@@ -121,6 +168,8 @@ void *timerHandler(void *param)
 {
   sleep(duration);
   printf("Done!\n");
+  printf("Stopping %s...\n", canInterface);
+  system(stopCanCmd);
   exit(EXIT_SUCCESS);
   return NULL;
 }

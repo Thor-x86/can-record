@@ -8,10 +8,11 @@ See [releases](https://github.com/Thor-x86/can-record/releases) to download the 
 
 ```
 Usage:
-    ./can-record <interface> <seconds> <path-to-output-file>
+    ./can-record <interface> [bitrate] <seconds> <path-to-output-file>
 
 Example:
-    ./can-record can0 30 /mnt/sdcard/recorded.csv
+    ./can-record vcan0 30 testing.csv
+    ./can-record can0 250000 30 /mnt/sdcard/recorded.csv
 ```
 
 ## Build for current machine
