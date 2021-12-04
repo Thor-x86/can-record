@@ -2,6 +2,8 @@
 
 This program helps you to record CAN Bus frames to CSV file with your linux machine.
 
+See [releases](https://github.com/Thor-x86/can-record/releases) to download the compiled executable file.
+
 ## How to use
 
 ```
